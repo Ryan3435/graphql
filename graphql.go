@@ -32,6 +32,7 @@ package graphql
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -120,6 +121,7 @@ func (c *Client) runWithJSON(ctx context.Context, req *Request, resp interface{}
 	r.Close = c.closeReq
 	r.Header.Set("Content-Type", "application/json; charset=utf-8")
 	r.Header.Set("Accept", "application/json; charset=utf-8")
+	r.Header.Set("Accept-Encoding", "gzip")
 	for key, values := range req.Header {
 		for _, value := range values {
 			r.Header.Add(key, value)
@@ -137,7 +139,11 @@ func (c *Client) runWithJSON(ctx context.Context, req *Request, resp interface{}
 		return errors.Wrap(err, "reading body")
 	}
 	c.logf("<< %s", buf.String())
-	if err := json.NewDecoder(&buf).Decode(&gr); err != nil {
+	gzipReader, err := gzip.NewReader(&buf)
+	if err != nil {
+		return errors.Wrap(err, "creating gzip reader")
+	}
+	if err := json.NewDecoder(gzipReader).Decode(&gr); err != nil {
 		if res.StatusCode != http.StatusOK {
 			return fmt.Errorf("graphql: server returned a non-200 status code: %v", res.StatusCode)
 		}
