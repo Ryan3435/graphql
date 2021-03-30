@@ -141,6 +141,9 @@ func (c *Client) runWithJSON(ctx context.Context, req *Request, resp interface{}
 	c.logf("<< %s", buf.String())
 	gzipReader, err := gzip.NewReader(&buf)
 	if err != nil {
+		if res.StatusCode != http.StatusOK {
+			return fmt.Errorf("graphql: server returned a non-200 status code: %v", res.StatusCode)
+		}
 		return errors.Wrap(err, "creating gzip reader")
 	}
 	if err := json.NewDecoder(gzipReader).Decode(&gr); err != nil {
